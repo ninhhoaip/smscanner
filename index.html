@@ -8,77 +8,77 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SM Scanner">
 <link rel="manifest" href="manifest.webmanifest">
-<title>SM Scanner v2</title>
+<title>SM Scanner v3</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-*{box-sizing:border-box}
-body{margin:0;background:#f3f4f6;color:#111}
-header{padding:14px 16px;background:#111;color:#fff;position:sticky;top:0;z-index:5}
-header h1{margin:0;font-size:20px}
-main{max-width:760px;margin:auto;padding:12px}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.card{background:#fff;border-radius:16px;padding:12px;text-align:center}
-.label{font-size:12px;color:#666;font-weight:700}
-.big{font-size:34px;font-weight:800;margin-top:4px}
-.camera{background:#000;border-radius:18px;overflow:hidden;position:relative;aspect-ratio:3/4}
-video{width:100%;height:100%;object-fit:cover;display:block}
-.frame{position:absolute;left:5%;right:5%;top:23%;height:52%;border:3px solid #00ff8c;border-radius:14px;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.15)}
-.hint{position:absolute;left:10px;right:10px;bottom:12px;color:#fff;text-align:center;font-weight:800;text-shadow:0 1px 4px #000}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-button{border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:750;background:#111;color:#fff}
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#111;color:#fff;padding:14px 16px;position:sticky;top:0;z-index:10}h1{font-size:19px;margin:0}
+main{max-width:720px;margin:auto;padding:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.card{background:#fff;border-radius:15px;text-align:center;padding:12px}
+.lbl{font-size:12px;color:#666;font-weight:700}.num{font-size:35px;font-weight:850;margin-top:3px}
+.cam{position:relative;background:#000;border-radius:18px;overflow:hidden;aspect-ratio:3/4}
+video{width:100%;height:100%;display:block;object-fit:cover}
+.guide{position:absolute;left:8%;right:8%;top:38%;height:23%;border:3px solid #00e87a;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.22);pointer-events:none}
+.guide:after{content:"ĐẶT RIÊNG PHẦN 5.28 SM VÀO Ô NÀY";position:absolute;left:0;right:0;top:-28px;text-align:center;color:#fff;font-size:12px;font-weight:800;text-shadow:0 1px 3px #000}
+.status{background:#fff;border-radius:14px;padding:12px;margin:10px 0;min-height:66px;line-height:1.45}
+.status strong{display:block;font-size:16px}
+.raw{font-size:12px;color:#666;word-break:break-all;margin-top:4px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+button{border:0;border-radius:14px;padding:14px 10px;font-size:16px;font-weight:800;background:#111;color:#fff}
 button.secondary{background:#fff;color:#111;border:1px solid #ddd}
-button.danger{background:#fff;color:#b00020;border:1px solid #e6b8c0}
-.status{background:#fff;border-radius:14px;padding:12px;margin:10px 0;line-height:1.45}
-.status strong{display:block}
-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden}
-th,td{padding:9px 7px;border-bottom:1px solid #eee;font-size:13px}
-td.sm{font-size:17px;font-weight:800}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e9f8ef;font-size:12px;font-weight:700}
-.loading{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:30}
-.loading.on{display:flex}
-.loadingbox{background:#fff;border-radius:16px;padding:18px;width:min(86vw,360px)}
+button.danger{background:#fff;color:#b00020;border:1px solid #e4b3bc}
+button:disabled{opacity:.45}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;margin-top:10px}
+th,td{padding:9px 7px;border-bottom:1px solid #eee;font-size:13px;text-align:left}td.sm{font-weight:850;font-size:17px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99;align-items:center;justify-content:center}
+.overlay.on{display:flex}.box{background:#fff;width:min(86vw,360px);border-radius:16px;padding:18px}.box strong{display:block;margin-bottom:9px}
 progress{width:100%}
+.version{font-size:11px;color:#777;text-align:center;margin:10px}
 </style>
 </head>
 <body>
-<header><h1>SM Scanner v2</h1></header>
+<header><h1>SM Scanner — Bản nhanh</h1></header>
 <main>
-<div class="cards">
- <div class="card"><div class="label">TỔNG SM</div><div id="total" class="big">0.00</div></div>
- <div class="card"><div class="label">SỐ TẤM</div><div id="count" class="big">0</div></div>
-</div>
+  <div class="stats">
+    <div class="card"><div class="lbl">TỔNG SM</div><div class="num" id="total">0.00</div></div>
+    <div class="card"><div class="lbl">SỐ TẤM</div><div class="num" id="count">0</div></div>
+  </div>
 
-<div class="camera">
- <video id="video" autoplay playsinline muted></video>
- <div class="frame"></div>
- <div class="hint">Giữ tem trong khung xanh • Tự quét liên tục</div>
-</div>
+  <div class="cam">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="guide" id="guide"></div>
+  </div>
 
-<div class="actions">
- <button id="startBtn">Mở camera</button>
- <button id="autoBtn" class="secondary">Bật tự quét</button>
- <button id="scanBtn" class="secondary">Quét ngay</button>
- <button id="undoBtn" class="secondary">Hoàn tác</button>
- <button id="exportBtn" class="secondary">Xuất CSV</button>
- <button id="clearBtn" class="danger">Xóa hết</button>
-</div>
+  <div id="status" class="status">
+    <strong>Chưa mở camera</strong>
+    Nhấn “Mở camera”, sau đó đặt riêng chữ <b>5.28 SM</b> vào ô xanh.
+    <div class="raw" id="raw"></div>
+  </div>
 
-<div id="status" class="status"><strong>Sẵn sàng</strong>Mở camera rồi bật tự quét.</div>
+  <div class="actions">
+    <button id="open">Mở camera</button>
+    <button id="scan" disabled>Quét ngay</button>
+    <button id="auto" class="secondary" disabled>Bật tự quét</button>
+    <button id="undo" class="secondary">Hoàn tác</button>
+    <button id="export" class="secondary">Xuất CSV</button>
+    <button id="clear" class="danger">Xóa hết</button>
+  </div>
 
-<table>
-<thead><tr><th>#</th><th>SM</th><th>Mã tem</th><th>Giờ</th></tr></thead>
-<tbody id="rows"></tbody>
-</table>
+  <table>
+    <thead><tr><th>#</th><th>SM</th><th>Giờ</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="version">v3 — OCR chỉ vùng SM để tăng tốc trên iPhone</div>
 </main>
 
-<div id="loading" class="loading">
- <div class="loadingbox">
-   <strong id="loadingText">Đang khởi tạo OCR…</strong>
-   <progress id="progress" max="1" value="0"></progress>
- </div>
+<div id="overlay" class="overlay">
+  <div class="box">
+    <strong id="loadText">Đang chuẩn bị OCR…</strong>
+    <progress id="prog" max="1" value="0"></progress>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

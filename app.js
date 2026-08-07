@@ -1,250 +1,178 @@
-const $ = s => document.querySelector(s);
-const video = $("#video");
-const totalEl = $("#total"), countEl = $("#count"), rowsEl = $("#rows");
-const statusEl = $("#status"), loading = $("#loading"), progress = $("#progress"), loadingText = $("#loadingText");
+const $=q=>document.querySelector(q);
+const video=$("#video"), guide=$("#guide"), status=$("#status"), raw=$("#raw");
+const totalEl=$("#total"), countEl=$("#count"), rows=$("#rows");
+const overlay=$("#overlay"), loadText=$("#loadText"), prog=$("#prog");
 
-let stream = null;
-let worker = null;
-let workerReady = false;
-let busy = false;
-let autoScan = false;
-let autoTimer = null;
-let items = JSON.parse(localStorage.getItem("sm_items_v2") || "[]");
+let stream=null, worker=null, ready=false, busy=false, auto=false, timer=null;
+let items=JSON.parse(localStorage.getItem("sm_v3_items")||"[]");
+let lastValue=null, lastAccept=0;
 
-let lastCandidate = null;
-let candidateHits = 0;
-let lastAcceptedFingerprint = "";
-let lastAcceptedTime = 0;
-
-function setStatus(title,msg){ statusEl.innerHTML=`<strong>${title}</strong>${msg}`; }
-function save(){ localStorage.setItem("sm_items_v2",JSON.stringify(items)); render(); }
-function total(){ return items.reduce((s,x)=>s+Number(x.sm),0); }
 function render(){
- totalEl.textContent=total().toFixed(2);
- countEl.textContent=items.length;
- rowsEl.innerHTML=items.map((x,i)=>`<tr><td>${items.length-i}</td><td class="sm">${Number(x.sm).toFixed(2)}</td><td>${esc(x.code||"-")}</td><td>${new Date(x.time).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}</td></tr>`).join("");
+  totalEl.textContent=items.reduce((s,x)=>s+x.sm,0).toFixed(2);
+  countEl.textContent=items.length;
+  rows.innerHTML=items.map((x,i)=>`<tr><td>${items.length-i}</td><td class="sm">${x.sm.toFixed(2)}</td><td>${new Date(x.time).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</td></tr>`).join("");
 }
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-
-async function initWorker(){
- if(workerReady) return;
- loading.classList.add("on");
- try{
-   worker = await Tesseract.createWorker("eng", 1, {
-     logger:m=>{
-       if(typeof m.progress==="number") progress.value=m.progress;
-       loadingText.textContent = m.status ? `${m.status} ${Math.round((m.progress||0)*100)}%` : "Đang khởi tạo OCR…";
-     }
-   });
-   await worker.setParameters({
-     tessedit_pageseg_mode: "6",
-     tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,:-/ "
-   });
-   workerReady=true;
- } finally { loading.classList.remove("on"); }
+function save(){localStorage.setItem("sm_v3_items",JSON.stringify(items));render()}
+function msg(title,text,rawText=""){
+  status.querySelector("strong").textContent=title;
+  const nodes=[...status.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE);
+  nodes.forEach(n=>n.remove());
+  status.insertBefore(document.createTextNode(text),raw);
+  raw.textContent=rawText?`OCR: ${rawText}`:"";
 }
-
-async function startCamera(){
- try{
-   await initWorker();
-   if(stream) stream.getTracks().forEach(t=>t.stop());
-   stream = await navigator.mediaDevices.getUserMedia({
-     video:{
-       facingMode:{ideal:"environment"},
-       width:{ideal:1920},
-       height:{ideal:1080},
-       focusMode:"continuous"
-     }, audio:false
-   });
-   video.srcObject=stream;
-   await video.play();
-   setStatus("Camera đã mở","Đưa tem vào khung xanh, nên để chữ SM chiếm khoảng 1/4 chiều ngang màn hình.");
- }catch(e){
-   console.error(e);
-   setStatus("Không mở được camera","Kiểm tra quyền Camera của Safari.");
- }
+async function initOCR(){
+  if(ready)return;
+  overlay.classList.add("on");
+  loadText.textContent="Lần đầu đang tải OCR…";
+  try{
+    worker=await Tesseract.createWorker("eng",1,{
+      logger:m=>{
+        if(typeof m.progress==="number")prog.value=m.progress;
+        if(m.status)loadText.textContent=`${m.status} ${Math.round((m.progress||0)*100)}%`;
+      }
+    });
+    await worker.setParameters({
+      tessedit_pageseg_mode:"7",
+      tessedit_char_whitelist:"0123456789.SMsm,"
+    });
+    ready=true;
+  } finally { overlay.classList.remove("on"); }
 }
-
-function grabFrame(){
- if(!video.videoWidth) return null;
- const src=document.createElement("canvas");
- src.width=video.videoWidth; src.height=video.videoHeight;
- src.getContext("2d").drawImage(video,0,0,src.width,src.height);
-
- // Lấy vùng rộng hơn để tránh lệch khung giữa tỉ lệ video và màn hình
- const sx=Math.round(src.width*0.05);
- const sy=Math.round(src.height*0.18);
- const sw=Math.round(src.width*0.90);
- const sh=Math.round(src.height*0.62);
-
- // upscale 2x + grayscale + contrast threshold mềm
- const out=document.createElement("canvas");
- out.width=sw*2; out.height=sh*2;
- const ctx=out.getContext("2d",{willReadFrequently:true});
- ctx.imageSmoothingEnabled=true;
- ctx.drawImage(src,sx,sy,sw,sh,0,0,out.width,out.height);
-
- const img=ctx.getImageData(0,0,out.width,out.height);
- const d=img.data;
- for(let i=0;i<d.length;i+=4){
-   const g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
-   // tăng tương phản mạnh nhưng không binary hoàn toàn
-   let v=(g-128)*1.75+128;
-   v=Math.max(0,Math.min(255,v));
-   d[i]=d[i+1]=d[i+2]=v;
- }
- ctx.putImageData(img,0,0);
- return out;
+async function openCamera(){
+  try{
+    if(!navigator.mediaDevices?.getUserMedia) throw new Error("Camera API unavailable");
+    if(stream)stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},
+      audio:false
+    });
+    video.srcObject=stream;
+    await video.play();
+    $("#scan").disabled=false; $("#auto").disabled=false;
+    msg("Camera đã mở"," Đặt riêng phần “5.28 SM” vào ô xanh rồi bấm Quét ngay.");
+    // tải OCR sau khi camera đã mở để không tạo cảm giác app bị đứng
+    initOCR().catch(e=>msg("Không tải được OCR"," Kiểm tra Internet rồi tải lại trang.",String(e)));
+  }catch(e){
+    msg("Không mở được camera"," Kiểm tra quyền Camera cho Safari.",String(e));
+  }
 }
 
-function normalize(t){
- return String(t).toUpperCase()
-   .replace(/[，]/g,",").replace(/[。]/g,".")
-   .replace(/\s+/g," ").trim();
+// Map đúng ô xanh trên màn hình vào frame video khi object-fit:cover
+function cropGuide(){
+  if(!video.videoWidth||!video.videoHeight)return null;
+
+  const vr=video.getBoundingClientRect(), gr=guide.getBoundingClientRect();
+  const vw=video.videoWidth, vh=video.videoHeight;
+  const scale=Math.max(vr.width/vw, vr.height/vh);
+  const rw=vw*scale, rh=vh*scale;
+  const offX=(rw-vr.width)/2, offY=(rh-vr.height)/2;
+
+  let sx=(gr.left-vr.left+offX)/scale;
+  let sy=(gr.top-vr.top+offY)/scale;
+  let sw=gr.width/scale, sh=gr.height/scale;
+
+  sx=Math.max(0,sx); sy=Math.max(0,sy);
+  sw=Math.min(vw-sx,sw); sh=Math.min(vh-sy,sh);
+
+  const temp=document.createElement("canvas");
+  temp.width=vw; temp.height=vh;
+  temp.getContext("2d").drawImage(video,0,0,vw,vh);
+
+  // OCR ảnh nhỏ, rộng tối đa 1000px
+  const targetW=Math.min(1000,Math.max(650,Math.round(sw*1.8)));
+  const targetH=Math.max(180,Math.round(targetW*(sh/sw)));
+  const out=document.createElement("canvas");
+  out.width=targetW; out.height=targetH;
+  const ctx=out.getContext("2d",{willReadFrequently:true});
+  ctx.drawImage(temp,sx,sy,sw,sh,0,0,targetW,targetH);
+
+  // grayscale + tăng tương phản
+  const im=ctx.getImageData(0,0,targetW,targetH),d=im.data;
+  for(let i=0;i<d.length;i+=4){
+    let g=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+    g=(g-128)*1.55+128;
+    g=Math.max(0,Math.min(255,g));
+    d[i]=d[i+1]=d[i+2]=g;
+  }
+  ctx.putImageData(im,0,0);
+  return out;
 }
+function parseSM(t){
+  let s=String(t||"").toUpperCase()
+    .replace(/O/g,"0").replace(/[IL|]/g,"1")
+    .replace(/,/g,".").replace(/\s+/g," ").trim();
 
-function parseSM(text){
- const t=normalize(text);
+  let m=s.match(/(\d{1,3}\.\d{1,3})/);
+  if(m){
+    let n=Number(m[1]);
+    if(n>0&&n<500)return n;
+  }
 
- const patterns=[
-   /(\d{1,3}[.,]\d{2,3})\s*S[MＮN]\b/,
-   /\bS[MＮN]\s*[:\-]?\s*(\d{1,3}[.,]\d{2,3})/,
-   /(\d{1,3})\s*[.,]\s*(\d{2,3})\s*S[MＮN]\b/
- ];
- for(const p of patterns){
-   const m=t.match(p);
-   if(m){
-     const s=m.length===3 ? `${m[1]}.${m[2]}` : m[1].replace(",",".");
-     const n=Number(s);
-     if(n>0 && n<500) return n;
-   }
- }
-
- // fallback: lấy số thập phân gần cuối văn bản, phù hợp layout tem mẫu
- const vals=[...t.matchAll(/\b(\d{1,3}[.,]\d{2})\b/g)]
-   .map(m=>Number(m[1].replace(",",".")))
-   .filter(n=>n>0 && n<200);
- return vals.length ? vals[vals.length-1] : null;
+  // OCR đôi khi bỏ dấu chấm: 528 SM -> 5.28
+  let digits=s.replace(/\D/g,"");
+  if(digits.length>=3&&digits.length<=5){
+    let n=Number(digits.slice(0,-2)+"."+digits.slice(-2));
+    if(n>0&&n<500)return n;
+  }
+  return null;
 }
-
-function parseCode(text){
- const t=normalize(text);
- const numeric=[...t.matchAll(/\b\d{10,32}\b/g)].map(m=>m[0]);
- if(numeric.length) return numeric.sort((a,b)=>b.length-a.length)[0];
-
- const mixed=[...t.matchAll(/\b[A-Z0-9\-]{10,32}\b/g)]
-   .map(m=>m[0]).filter(x=>/\d/.test(x));
- return mixed.sort((a,b)=>b.length-a.length)[0] || "";
+async function recognize(canvas){
+  await initOCR();
+  const r=await worker.recognize(canvas);
+  return (r.data.text||"").trim();
 }
-
-function fingerprintFor(text,code,sm){
- if(code) return "C:"+code;
- const t=normalize(text).replace(/\s/g,"");
- return `T:${sm.toFixed(2)}:${t.slice(0,80)}`;
-}
-
 async function scanOnce(){
- if(busy || !video.videoWidth) return;
- busy=true;
- try{
-   await initWorker();
-   const canvas=grabFrame();
-   if(!canvas) return;
-   const {data}=await worker.recognize(canvas);
-   const text=data.text||"";
-   const sm=parseSM(text);
-   const code=parseCode(text);
+  if(busy)return;
+  if(!video.videoWidth){msg("Chưa có hình camera"," Nhấn Mở camera trước.");return}
+  busy=true;
+  $("#scan").textContent="Đang đọc…";
+  try{
+    const c=cropGuide();
+    if(!c)throw new Error("Không lấy được hình");
+    const text=await recognize(c);
+    const sm=parseSM(text);
 
-   if(sm==null){
-     setStatus("Đang tìm SM…","Giữ máy yên và đưa phần “x.xx SM” gần camera hơn.");
-     return;
-   }
+    if(sm==null){
+      msg("Chưa đọc được SM"," Đưa chữ và số TO hơn trong ô xanh, giữ máy yên.",text||"(trống)");
+      return;
+    }
 
-   const fp=fingerprintFor(text,code,sm);
+    const now=Date.now();
+    // không cộng liên tục cùng giá trị khi tem vẫn còn trước camera
+    if(lastValue!==null && Math.abs(lastValue-sm)<0.001 && now-lastAccept<5000){
+      msg("Đã thấy "+sm.toFixed(2)+" SM"," Tem này vừa được cộng. Đưa tem khác vào.",text);
+      return;
+    }
 
-   // tự quét: cần thấy cùng kết quả 2 lần để giảm đọc sai
-   const cand=`${sm.toFixed(2)}|${code}`;
-   if(autoScan){
-     if(cand===lastCandidate) candidateHits++;
-     else { lastCandidate=cand; candidateHits=1; }
-     if(candidateHits<2){
-       setStatus("Đã thấy "+sm.toFixed(2)+" SM","Giữ yên thêm một chút để xác nhận.");
-       return;
-     }
-   }
-
-   const now=Date.now();
-
-   // tránh cộng cùng tem liên tục khi vẫn còn nằm trước camera
-   if(fp===lastAcceptedFingerprint && now-lastAcceptedTime<7000){
-     setStatus("⚠️ Tem đang giữ trước camera",`${sm.toFixed(2)} SM không cộng lại.`);
-     return;
-   }
-
-   // chống trùng lâu dài nếu đọc được mã tem
-   if(code && items.some(x=>x.code===code)){
-     setStatus("⚠️ Tem này đã quét rồi",`${sm.toFixed(2)} SM không cộng lại.`);
-     lastAcceptedFingerprint=fp; lastAcceptedTime=now;
-     return;
-   }
-
-   items.unshift({sm,code:code||"Không đọc được mã",time:new Date().toISOString()});
-   save();
-
-   lastAcceptedFingerprint=fp;
-   lastAcceptedTime=now;
-   candidateHits=0;
-   lastCandidate=null;
-
-   if(navigator.vibrate) navigator.vibrate(100);
-   setStatus("✅ Đã cộng "+sm.toFixed(2)+" SM",`Tổng hiện tại: ${total().toFixed(2)} SM`);
- }catch(e){
-   console.error(e);
-   setStatus("Lỗi OCR","Thử giữ camera gần hơn hoặc tăng ánh sáng.");
- }finally{
-   busy=false;
- }
+    items.unshift({sm,time:new Date().toISOString()});
+    lastValue=sm; lastAccept=now;
+    save();
+    if(navigator.vibrate)navigator.vibrate(80);
+    msg("✅ Đã cộng "+sm.toFixed(2)+" SM",` Tổng: ${items.reduce((s,x)=>s+x.sm,0).toFixed(2)} SM`,text);
+  }catch(e){
+    msg("Lỗi khi quét"," Thử tải lại trang hoặc kiểm tra Internet.",String(e));
+  }finally{
+    busy=false;
+    $("#scan").textContent="Quét ngay";
+  }
 }
-
-function setAuto(on){
- autoScan=on;
- $("#autoBtn").textContent=on?"Tắt tự quét":"Bật tự quét";
- $("#autoBtn").classList.toggle("secondary",!on);
- if(autoTimer) clearInterval(autoTimer);
- if(on){
-   autoTimer=setInterval(scanOnce,900);
-   setStatus("Tự quét đã bật","Chỉ cần lia từng tem vào khung. Không cần bấm Quét.");
- } else {
-   autoTimer=null;
- }
+function setAuto(v){
+  auto=v; $("#auto").textContent=v?"Tắt tự quét":"Bật tự quét";
+  if(timer)clearInterval(timer);
+  timer=v?setInterval(scanOnce,1500):null;
+  msg(v?"Tự quét đã bật":"Tự quét đã tắt",v?" Chỉ cần thay từng tem trong ô xanh.":" Có thể bấm Quét ngay.");
 }
-
-$("#startBtn").onclick=async()=>{await startCamera(); setAuto(true);};
-$("#autoBtn").onclick=()=>setAuto(!autoScan);
-$("#scanBtn").onclick=scanOnce;
-
-$("#undoBtn").onclick=()=>{
- if(!items.length)return;
- const x=items.shift(); save();
- setStatus("Đã hoàn tác",`Đã bỏ ${Number(x.sm).toFixed(2)} SM`);
+$("#open").onclick=openCamera;
+$("#scan").onclick=scanOnce;
+$("#auto").onclick=()=>setAuto(!auto);
+$("#undo").onclick=()=>{if(items.length){let x=items.shift();save();msg("Đã hoàn tác",` Bỏ ${x.sm.toFixed(2)} SM.`)}};
+$("#clear").onclick=()=>{if(items.length&&confirm("Xóa toàn bộ?")){items=[];save();lastValue=null;msg("Đã xóa"," Tổng về 0.00.")}};
+$("#export").onclick=()=>{
+  if(!items.length)return;
+  let csv="\ufeffSTT,SM,Thoi gian\n";
+  [...items].reverse().forEach((x,i)=>csv+=`${i+1},${x.sm.toFixed(2)},"${new Date(x.time).toLocaleString("vi-VN")}"\n`);
+  csv+=`,${items.reduce((s,x)=>s+x.sm,0).toFixed(2)},TONG\n`;
+  const u=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const a=document.createElement("a");a.href=u;a.download="SM_Scanner.csv";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
 };
-$("#clearBtn").onclick=()=>{
- if(items.length && confirm("Xóa toàn bộ dữ liệu?")){
-   items=[];save();setStatus("Đã xóa","Tổng SM = 0.00");
- }
-};
-$("#exportBtn").onclick=()=>{
- if(!items.length)return;
- let csv="\ufeffSTT,SM,Ma tem,Thoi gian\n";
- [...items].reverse().forEach((x,i)=>{
-   csv+=`${i+1},${Number(x.sm).toFixed(2)},"${String(x.code).replaceAll('"','""')}","${new Date(x.time).toLocaleString("vi-VN")}"\n`;
- });
- csv+=`,${total().toFixed(2)},TONG,\n`;
- const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
- const url=URL.createObjectURL(blob);
- const a=document.createElement("a");a.href=url;a.download="SM_Scanner.csv";a.click();
- setTimeout(()=>URL.revokeObjectURL(url),1000);
-};
-
-if("serviceWorker"in navigator) navigator.serviceWorker.register("./sw.js").catch(console.warn);
 render();

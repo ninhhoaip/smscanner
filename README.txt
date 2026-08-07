@@ -1,16 +1,23 @@
-SM Scanner PWA v2
+SM Scanner v3 - bản sửa lỗi đứng/quét chậm
 
-Điểm cải tiến:
-- OCR Worker chỉ khởi tạo 1 lần, không tải lại mỗi lần quét.
-- Tự quét khoảng mỗi 0,9 giây.
-- Ảnh được phóng to 2x và tăng tương phản trước OCR.
-- Cần nhận cùng một kết quả 2 lần liên tiếp trước khi cộng để giảm đọc nhầm.
-- Không cộng lại cùng tem khi vẫn đang nằm trước camera.
-- Nếu OCR đọc được mã dài trên tem, app chống quét trùng theo mã.
+CẬP NHẬT GITHUB:
+1. Xóa hoặc ghi đè 4 file cũ:
+   index.html
+   app.js
+   manifest.webmanifest
+   sw.js
+2. Upload 4 file mới này và Commit changes.
+3. Chờ GitHub Pages 1-2 phút.
+4. Trên iPhone mở URL và thêm ?v=3 ở cuối, ví dụ:
+   https://tenban.github.io/sm-scanner/?v=3
+5. Nếu đã Add to Home Screen bản cũ, xóa icon cũ rồi mở Safari link ?v=3,
+   sau đó Add to Home Screen lại.
 
-Cập nhật GitHub Pages:
-1. Vào repository cũ.
-2. Thay index.html, app.js, manifest.webmanifest, sw.js bằng các file trong gói này.
-3. Commit changes.
-4. Đợi GitHub Pages cập nhật 1-2 phút.
-5. Trên iPhone đóng hẳn app web rồi mở lại. Nếu vẫn thấy bản cũ, Safari > xóa dữ liệu website của trang hoặc đổi URL thêm ?v=2 một lần.
+CÁCH QUÉT:
+- Nhấn Mở camera.
+- Chỉ đặt phần chữ/số như "5.28 SM" vào đúng ô xanh.
+- Chữ nên chiếm phần lớn ô xanh.
+- Bấm Quét ngay.
+- Sau khi ổn có thể Bật tự quét.
+
+Bản v3 không OCR cả tem nữa, chỉ OCR đúng vùng SM để nhanh hơn.

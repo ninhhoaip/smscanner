@@ -1,7 +1,7 @@
 {
-  "name": "SM Scanner v2",
+  "name": "SM Scanner v3",
   "short_name": "SM Scanner",
-  "start_url": "./",
+  "start_url": "./?v=3",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#111111"
