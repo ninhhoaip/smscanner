@@ -1,9 +1,8 @@
 {
-  "name": "SM Scanner",
+  "name": "SM Scanner v2",
   "short_name": "SM Scanner",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f3f4f6",
-  "theme_color": "#111111",
-  "description": "Quét tem và cộng tổng SM trên iPhone"
+  "theme_color": "#111111"
 }

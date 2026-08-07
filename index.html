@@ -1,91 +1,81 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <meta name="theme-color" content="#111111" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="SM Scanner" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <title>SM Scanner</title>
-  <style>
-    :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    * { box-sizing: border-box; }
-    body { margin:0; background:#f3f4f6; color:#111; }
-    header { position:sticky; top:0; z-index:10; padding:14px 16px; background:#111; color:#fff; }
-    header h1 { margin:0; font-size:20px; }
-    main { max-width:760px; margin:0 auto; padding:14px; }
-    .cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-    .card { background:white; border-radius:16px; padding:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); text-align:center; }
-    .label { font-size:12px; color:#666; font-weight:700; }
-    .big { font-size:34px; font-weight:800; margin-top:5px; }
-    .camera { background:#000; border-radius:18px; overflow:hidden; position:relative; aspect-ratio:3/4; }
-    video, canvas.preview { width:100%; height:100%; object-fit:cover; display:block; }
-    .frame { position:absolute; left:7%; right:7%; top:30%; height:38%; border:3px solid white; border-radius:14px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,.18); }
-    .hint { position:absolute; left:0; right:0; bottom:12px; text-align:center; color:white; font-weight:700; text-shadow:0 1px 3px #000; }
-    .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
-    button, .filebtn { border:0; border-radius:14px; padding:14px 12px; font-size:16px; font-weight:750; background:#111; color:#fff; text-align:center; }
-    button.secondary, .filebtn.secondary { background:#fff; color:#111; border:1px solid #ddd; }
-    button.danger { background:#fff; color:#b00020; border:1px solid #e2b8bf; }
-    button:disabled { opacity:.5; }
-    input[type=file] { display:none; }
-    .status { margin:12px 0; padding:12px 14px; background:#fff; border-radius:14px; line-height:1.45; }
-    .status strong { display:block; margin-bottom:3px; }
-    table { width:100%; border-collapse:collapse; background:#fff; border-radius:14px; overflow:hidden; }
-    th,td { padding:10px 8px; border-bottom:1px solid #eee; font-size:13px; }
-    th { text-align:left; background:#fafafa; }
-    td.sm { font-weight:800; font-size:16px; }
-    .tiny { color:#666; font-size:12px; margin-top:8px; }
-    .loading { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; align-items:center; justify-content:center; }
-    .loading.on { display:flex; }
-    .loadingbox { background:#fff; padding:18px; border-radius:16px; width:min(88vw,380px); }
-    progress { width:100%; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SM Scanner">
+<link rel="manifest" href="manifest.webmanifest">
+<title>SM Scanner v2</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#111}
+header{padding:14px 16px;background:#111;color:#fff;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:20px}
+main{max-width:760px;margin:auto;padding:12px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.card{background:#fff;border-radius:16px;padding:12px;text-align:center}
+.label{font-size:12px;color:#666;font-weight:700}
+.big{font-size:34px;font-weight:800;margin-top:4px}
+.camera{background:#000;border-radius:18px;overflow:hidden;position:relative;aspect-ratio:3/4}
+video{width:100%;height:100%;object-fit:cover;display:block}
+.frame{position:absolute;left:5%;right:5%;top:23%;height:52%;border:3px solid #00ff8c;border-radius:14px;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.15)}
+.hint{position:absolute;left:10px;right:10px;bottom:12px;color:#fff;text-align:center;font-weight:800;text-shadow:0 1px 4px #000}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+button{border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:750;background:#111;color:#fff}
+button.secondary{background:#fff;color:#111;border:1px solid #ddd}
+button.danger{background:#fff;color:#b00020;border:1px solid #e6b8c0}
+.status{background:#fff;border-radius:14px;padding:12px;margin:10px 0;line-height:1.45}
+.status strong{display:block}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden}
+th,td{padding:9px 7px;border-bottom:1px solid #eee;font-size:13px}
+td.sm{font-size:17px;font-weight:800}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e9f8ef;font-size:12px;font-weight:700}
+.loading{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:30}
+.loading.on{display:flex}
+.loadingbox{background:#fff;border-radius:16px;padding:18px;width:min(86vw,360px)}
+progress{width:100%}
+</style>
 </head>
 <body>
-<header><h1>SM Scanner</h1></header>
+<header><h1>SM Scanner v2</h1></header>
 <main>
-  <section class="cards">
-    <div class="card"><div class="label">TỔNG SM</div><div class="big" id="total">0.00</div></div>
-    <div class="card"><div class="label">SỐ TẤM</div><div class="big" id="count">0</div></div>
-  </section>
+<div class="cards">
+ <div class="card"><div class="label">TỔNG SM</div><div id="total" class="big">0.00</div></div>
+ <div class="card"><div class="label">SỐ TẤM</div><div id="count" class="big">0</div></div>
+</div>
 
-  <section class="camera">
-    <video id="video" playsinline autoplay muted></video>
-    <canvas id="preview" class="preview" hidden></canvas>
-    <div class="frame"></div>
-    <div class="hint">Đặt phần “x.xx SM” và mã số vào khung</div>
-  </section>
+<div class="camera">
+ <video id="video" autoplay playsinline muted></video>
+ <div class="frame"></div>
+ <div class="hint">Giữ tem trong khung xanh • Tự quét liên tục</div>
+</div>
 
-  <div class="actions">
-    <button id="startBtn">Mở camera</button>
-    <button id="captureBtn" disabled>Quét tem</button>
-    <label class="filebtn secondary">Chụp / chọn ảnh
-      <input id="fileInput" type="file" accept="image/*" capture="environment" />
-    </label>
-    <button class="secondary" id="undoBtn">Hoàn tác</button>
-    <button class="secondary" id="exportBtn">Xuất CSV</button>
-    <button class="danger" id="clearBtn">Xóa hết</button>
-  </div>
+<div class="actions">
+ <button id="startBtn">Mở camera</button>
+ <button id="autoBtn" class="secondary">Bật tự quét</button>
+ <button id="scanBtn" class="secondary">Quét ngay</button>
+ <button id="undoBtn" class="secondary">Hoàn tác</button>
+ <button id="exportBtn" class="secondary">Xuất CSV</button>
+ <button id="clearBtn" class="danger">Xóa hết</button>
+</div>
 
-  <div class="status" id="status">
-    <strong>Sẵn sàng</strong>
-    Nhấn “Mở camera”, sau đó đưa tem vào khung và bấm “Quét tem”.
-  </div>
+<div id="status" class="status"><strong>Sẵn sàng</strong>Mở camera rồi bật tự quét.</div>
 
-  <table>
-    <thead><tr><th>#</th><th>SM</th><th>Mã tem</th><th>Giờ</th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
-  <div class="tiny">OCR dùng Tesseract.js. Lần đầu mở cần Internet để tải bộ nhận dạng. Dữ liệu quét được lưu trên chính iPhone.</div>
+<table>
+<thead><tr><th>#</th><th>SM</th><th>Mã tem</th><th>Giờ</th></tr></thead>
+<tbody id="rows"></tbody>
+</table>
 </main>
 
-<div class="loading" id="loading">
-  <div class="loadingbox">
-    <strong id="loadingText">Đang đọc tem…</strong>
-    <progress id="progress" max="1" value="0"></progress>
-  </div>
+<div id="loading" class="loading">
+ <div class="loadingbox">
+   <strong id="loadingText">Đang khởi tạo OCR…</strong>
+   <progress id="progress" max="1" value="0"></progress>
+ </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>

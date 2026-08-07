@@ -1,29 +1,16 @@
-SM Scanner PWA — iPhone
+SM Scanner PWA v2
 
-Chức năng:
-- Mở camera sau của iPhone.
-- Chụp tem và OCR số dạng "5.28 SM".
-- Tự cộng tổng SM.
-- Cố gắng đọc chuỗi số dài trên tem để chống quét trùng.
-- Lưu dữ liệu bằng localStorage.
-- Hoàn tác, xóa hết, xuất CSV.
-- Có thể Thêm vào Màn hình chính như app.
+Điểm cải tiến:
+- OCR Worker chỉ khởi tạo 1 lần, không tải lại mỗi lần quét.
+- Tự quét khoảng mỗi 0,9 giây.
+- Ảnh được phóng to 2x và tăng tương phản trước OCR.
+- Cần nhận cùng một kết quả 2 lần liên tiếp trước khi cộng để giảm đọc nhầm.
+- Không cộng lại cùng tem khi vẫn đang nằm trước camera.
+- Nếu OCR đọc được mã dài trên tem, app chống quét trùng theo mã.
 
-QUAN TRỌNG:
-Camera trực tiếp trong Safari/PWA cần trang chạy bằng HTTPS.
-Không nên mở index.html trực tiếp từ ứng dụng Files nếu muốn dùng camera trực tiếp.
-
-Cách dễ nhất để chạy:
-1. Giải nén thư mục này.
-2. Đưa 4 file web lên một hosting HTTPS như GitHub Pages, Netlify hoặc Vercel.
-3. Mở đường dẫn bằng Safari trên iPhone.
-4. Chọn Chia sẻ > Thêm vào Màn hình chính.
-5. Mở SM Scanner từ màn hình chính và cấp quyền Camera.
-
-Nếu chưa host HTTPS:
-- Nút "Chụp / chọn ảnh" vẫn có thể dùng trên trình duyệt trong nhiều trường hợp,
-  nhưng cách ổn định nhất vẫn là host HTTPS.
-
-OCR:
-Ứng dụng dùng Tesseract.js từ CDN. Lần đầu sử dụng cần Internet để tải bộ OCR.
-Độ chính xác phụ thuộc ánh sáng, độ nét, góc chụp và cách in tem.
+Cập nhật GitHub Pages:
+1. Vào repository cũ.
+2. Thay index.html, app.js, manifest.webmanifest, sw.js bằng các file trong gói này.
+3. Commit changes.
+4. Đợi GitHub Pages cập nhật 1-2 phút.
+5. Trên iPhone đóng hẳn app web rồi mở lại. Nếu vẫn thấy bản cũ, Safari > xóa dữ liệu website của trang hoặc đổi URL thêm ?v=2 một lần.
